@@ -7,7 +7,6 @@ import ogs from "open-graph-scraper";
 import fsExtra from "fs-extra";
 
 import downloadImg from "../middleware/download.js";
-import pMap from "p-map";
 
 dotenv.config();
 

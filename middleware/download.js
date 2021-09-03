@@ -1,6 +1,5 @@
 import fs from "fs";
 import request from "request";
-import download from "image-downloader";
 
 export const downloadImg = async (url, path, callback, error) => {
   request.head(url, (err, res, body) => {
