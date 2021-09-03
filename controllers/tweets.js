@@ -56,11 +56,15 @@ export const runTwitter = async (req, res) => {
           });
         } else {
           let url = false;
-          if (tweet?.entities?.urls[0]?.expanded_url) {
-            url = tweet.entities.urls[0].expanded_url;
-            const twitterCheck = url.split("twitter.com");
-            if (twitterCheck.length > 1) {
-              url = false;
+          if (tweet.entities.urls) {
+            if (tweet.entities.urls[0]) {
+              if (tweet.entities.urls[0].expanded_url) {
+                url = tweet.entities.urls[0].expanded_url;
+                const twitterCheck = url.split("twitter.com");
+                if (twitterCheck.length > 1) {
+                  url = false;
+                }
+              }
             }
           }
           if (url !== false) {
@@ -68,15 +72,18 @@ export const runTwitter = async (req, res) => {
               .then((data) => {
                 const { result } = data;
                 let download = false;
-                if (
-                  result.success === true &&
-                  result?.ogImage?.url &&
-                  result?.ogImage?.type
-                ) {
-                  if (
-                    result.ogImage.type === ("jpg" || "png" || "jpeg" || "webp")
-                  ) {
-                    download = true;
+                if (result.success === true) {
+                  if (result.ogImage) {
+                    if (result.ogImage.url && result.ogImage.type) {
+                      {
+                        if (
+                          result.ogImage.type ===
+                          ("jpg" || "png" || "jpeg" || "webp")
+                        ) {
+                          download = true;
+                        }
+                      }
+                    }
                   }
                 }
                 if (download) {
@@ -122,139 +129,3 @@ export const runTwitter = async (req, res) => {
     console.log(e.message);
   }
 };
-
-// export const runTwitter = async (req, res) => {
-//   const { id: id } = req.query;
-
-//   try {
-//     const data = await twitterClient.tweets.statusesUserTimeline({
-//       screen_name: id,
-//       exclude_replies: true,
-//       include_rts: false,
-//       count: 200,
-//     });
-//     fsExtra.emptyDirSync(`./images/${id}`);
-//     let tweets = [];
-//     const finishedMap = data.map((tweet) => {
-//       const singleIteration = new Promise((resolve, reject) => {
-//         if (tweet.entities.media) {
-//           const media = tweet.entities.media;
-//           resolve({
-//             content: tweet.text.split("\n"),
-//             favorites: tweet.favorite_count,
-//             retweets: tweet.retweet_count,
-//             media: media[0].media_url_https ? media[0].media_url_https : false,
-//             url: false,
-//             user: {
-//               name: tweet.user.name,
-//               handle: tweet.user.screen_name,
-//               followers: tweet.user.followers_count,
-//               pic: tweet.user.profile_image_url_https,
-//               followers: tweet.user.followers_count,
-//             },
-//           });
-//         } else {
-//           let url;
-//           if (tweet.entities.urls) {
-//             const urls = tweet.entities.urls;
-//             if (urls[0]) {
-//               const raw = urls[0].expanded_url;
-//               const twitterCheck = raw.split("https://twitter.com/");
-//               if (twitterCheck.length > 1) {
-//                 url = undefined;
-//               } else {
-//                 url = urls[0].expanded_url;
-//               }
-//             } else {
-//               url = undefined;
-//             }
-//           } else {
-//             url = undefined;
-//           }
-
-//           if (url) {
-//             const ogsOptions = {
-//               url: url,
-//             };
-//             ogs(ogsOptions)
-//               .then((data) => {
-//                 const { result } = data;
-//                 if (result.success === true) {
-//                   resolve({
-//                     content: tweet.text.split("\n"),
-//                     favorites: tweet.favorite_count,
-//                     retweets: tweet.retweet_count,
-//                     media: tweet?.entities?.media
-//                       ? tweet.entities.media[0].media_url_https
-//                       : false,
-//                     url: {
-//                       url: url,
-//                       media: `/images/${id}/${tweet.id}.${result.ogImage.type}`,
-//                       title: result.ogTitle,
-//                     },
-//                     user: {
-//                       name: tweet.user.name,
-//                       handle: tweet.user.screen_name,
-//                       followers: tweet.user.followers_count,
-//                       pic: tweet.user.profile_image_url_https,
-//                       followers: tweet.user.followers_count,
-//                     },
-//                   });
-//                   downloadImg(
-//                     result.ogImage.url,
-//                     `./images/${id}/${tweet.id}.${result.ogImage.type}`,
-//                     () => {
-//                       console.log("downloaded");
-//                     }
-//                   );
-//                 } else {
-//                   resolve({
-//                     content: tweet.text.split("\n"),
-//                     favorites: tweet.favorite_count,
-//                     retweets: tweet.retweet_count,
-//                     media: tweet?.entities?.media
-//                       ? tweet.entities.media[0].media_url_https
-//                       : false,
-//                     url: false,
-//                     user: {
-//                       name: tweet.user.name,
-//                       handle: tweet.user.screen_name,
-//                       followers: tweet.user.followers_count,
-//                       pic: tweet.user.profile_image_url_https,
-//                       followers: tweet.user.followers_count,
-//                     },
-//                   });
-//                 }
-//               })
-//               .catch((e) => console.log(e));
-//           } else {
-//             console.log(tweet);
-//             resolve({
-//               content: tweet.text.split("\n"),
-//               favorites: tweet.favorite_count,
-//               retweets: tweet.retweet_count,
-//               media: false,
-//               url: false,
-//               user: {
-//                 name: tweet.user.name,
-//                 handle: tweet.user.screen_name,
-//                 followers: tweet.user.followers_count,
-//                 pic: tweet.user.profile_image_url_https,
-//                 followers: tweet.user.followers_count,
-//               },
-//             });
-//           }
-//         }
-//       }).then((result) => {
-//         console.log("still running");
-//         tweets.push(result);
-//       });
-//     });
-//     Promise.all(finishedMap).then(() => {
-//       console.log("finished");
-//       res.status(200).json(tweets);
-//     });
-//   } catch (e) {
-//     console.log(e);
-//   }
-// };
