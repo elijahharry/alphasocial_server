@@ -34,6 +34,7 @@ export const runTwitter = async (req, res) => {
         exclude_replies: false,
         include_rts: false,
         count: 200,
+        tweet_mode: "extended",
       });
 
       fsExtra.emptyDirSync(`./images/${id}`);
@@ -47,23 +48,27 @@ export const runTwitter = async (req, res) => {
       let tweets = [];
       for (let i = 0; i < topTweets.length; i++) {
         const tweet = topTweets[i];
-        const singleIteration = new Promise((resolve) => {
-          const tweetTemp = {
-            id: tweet.id_str,
-            content: tweet.text.split("\n"),
-            favorites: tweet.favorite_count,
-            retweets: tweet.retweet_count,
-            media: false,
-            url: false,
-            user: {
-              name: tweet.user.name,
-              handle: tweet.user.screen_name,
-              followers: tweet.user.followers_count,
-              pic: tweet.user.profile_image_url_https,
-              followers: tweet.user.followers_count,
-            },
-          };
+        const textRaw = tweet.full_text.split("\n");
+        var textFiltered = textRaw.filter((t) => {
+          return t != "";
+        });
+        const tweetTemp = {
+          id: tweet.id_str,
+          content: textFiltered,
+          favorites: tweet.favorite_count,
+          retweets: tweet.retweet_count,
+          media: false,
+          url: false,
+          user: {
+            name: tweet.user.name,
+            handle: tweet.user.screen_name,
+            followers: tweet.user.followers_count,
+            pic: tweet.user.profile_image_url_https,
+            followers: tweet.user.followers_count,
+          },
+        };
 
+        const singleIteration = new Promise((resolve) => {
           if (tweet.entities.media) {
             const media = tweet.entities.media;
             resolve({
