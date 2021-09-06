@@ -49,7 +49,7 @@ export const runTwitter = async (req, res) => {
         const tweet = topTweets[i];
         const singleIteration = new Promise((resolve) => {
           const tweetTemp = {
-            id: tweet.id,
+            id: tweet.id_str,
             content: tweet.text.split("\n"),
             favorites: tweet.favorite_count,
             retweets: tweet.retweet_count,
