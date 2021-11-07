@@ -16,6 +16,7 @@
     "fs": "*",
     "fs-extra": "^10.0.0",
     "mongoose": "^6.0.12",
+    "node-cron": "^3.0.0",
     "nodemon": "^2.0.7",
     "open-graph-scraper": "^4.9.1",
     "request": "^2.88.2",

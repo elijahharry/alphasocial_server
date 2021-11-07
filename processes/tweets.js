@@ -1,4 +1,5 @@
 import { TwitterClient } from "twitter-api-client";
+import cron from "node-cron";
 import ogs from "open-graph-scraper";
 
 import fsExtra from "fs-extra";
@@ -167,5 +168,7 @@ const fetchAllTweets = async () => {
 
 export const startTweetFetching = () => {
   fetchAllTweets();
-  setInterval(fetchAllTweets, 3600000);
+  cron.schedule("0 */2 * * *", () => {
+    fetchAllTweets();
+  });
 };
