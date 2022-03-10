@@ -20,7 +20,7 @@ import TweetsModel from "../models/tweets.js";
 
 export const getTweets = async (req, res) => {
   // console.log(req);
-  if (req?.body?.ids) {
+  if (req.body.ids) {
     try {
       const tweets = await fetchAllTweets(req.body.ids);
       res.status(200).json(tweets);
