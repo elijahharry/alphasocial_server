@@ -4,11 +4,11 @@ import dotenv from "dotenv";
 import * as path from "path";
 import mongoose from "mongoose";
 
-import { startTweetFetching } from "./processes/tweets.js";
-
 import tweetRoutes from "./routes/tweets.js";
 
 const app = express();
+app.use(express.json());
+app.use(express.urlencoded());
 dotenv.config();
 
 const __dirname = path.resolve(path.dirname(""));
@@ -22,6 +22,5 @@ mongoose
   .connect(CONNECTION_URL)
   .then(() => {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-    startTweetFetching();
   })
   .catch((error) => console.log(error.message));

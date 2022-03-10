@@ -23,14 +23,15 @@ const fetchTweets = async (id) => {
       count: 200,
       tweet_mode: "extended",
     });
-    fsExtra.emptyDirSync(`./images/${id}`);
+
     const sorted = data.sort((a, b) => {
       return b.favorite_count - a.favorite_count;
     });
+
     const topTweets = sorted.slice(0, 30);
-    let tweets = [];
-    for (let i = 0; i < topTweets.length; i++) {
-      const tweet = topTweets[i];
+
+    const finished = [];
+    for (const tweet of topTweets) {
       const textRaw = tweet.full_text.split("\n");
       var textFiltered = textRaw.filter((t) => {
         return t != "";
@@ -50,125 +51,85 @@ const fetchTweets = async (id) => {
           followers: tweet.user.followers_count,
         },
       };
-      const singleIteration = new Promise((resolve) => {
-        if (tweet.entities.media) {
-          const media = tweet.entities.media;
-          resolve({
-            ...tweetTemp,
-            media: media[0].media_url_https ? media[0].media_url_https : false,
-          });
-        } else {
-          let url = false;
-          if (tweet.entities.urls) {
-            if (tweet.entities.urls[0]) {
-              if (tweet.entities.urls[0].expanded_url) {
-                url = tweet.entities.urls[0].expanded_url;
-                const twitterCheck = url.split("twitter.com");
-                if (twitterCheck.length > 1) {
-                  url = false;
-                }
+      if (tweet.entities.media) {
+        const media = tweet.entities.media;
+        finished.push({
+          ...tweetTemp,
+          media: media[0].media_url_https ? media[0].media_url_https : false,
+        });
+      } else {
+        let url = false;
+        if (tweet.entities.urls) {
+          if (tweet.entities.urls[0]) {
+            if (tweet.entities.urls[0].expanded_url) {
+              url = tweet.entities.urls[0].expanded_url;
+              const twitterCheck = url.split("twitter.com");
+              if (twitterCheck.length > 1) {
+                url = false;
               }
             }
           }
-          if (url !== false) {
-            ogs({ url: url })
-              .then((data) => {
-                const { result } = data;
-                let download = false;
-                if (result.success === true) {
-                  if (result.ogImage) {
-                    if (result.ogImage.url && result.ogImage.type) {
-                      {
-                        if (
-                          result.ogImage.type ===
-                          ("jpg" || "png" || "jpeg" || "webp")
-                        ) {
-                          download = true;
-                        }
-                      }
-                    }
-                  }
-                }
-                if (download) {
-                  downloadImg(
-                    result.ogImage.url,
-                    `./images/${id}/${tweet.id}.${result.ogImage.type}`,
-                    () => {
-                      resolve({
-                        ...tweetTemp,
-                        url: {
-                          url: url,
-                          media: `/images/${id}/${tweet.id}.${result.ogImage.type}`,
-                          title: result.ogTitle,
-                        },
-                      });
-                    },
-                    () => {
-                      resolve(tweetTemp);
-                    }
-                  );
-                } else {
-                  resolve(tweetTemp);
-                }
-              })
-              .catch((e) => {
-                console.log(e);
-                resolve(tweetTemp);
-              });
-          } else {
-            resolve(tweetTemp);
-          }
         }
-      });
-      tweets.push(singleIteration);
-    }
-    const finished = await Promise.all(tweets);
-
-    try {
-      const oldTweets = await TweetsModel.find({ account: id });
-      if (oldTweets.length > 0) {
-        const deletePromises = oldTweets.map((oldTweet) => {
-          const { _id } = oldTweet;
-          return new Promise(async (resolve) => {
-            await TweetsModel.findByIdAndRemove(_id);
-            resolve();
-          });
-        });
-        await Promise.all(deletePromises);
+        if (url !== false) {
+          const result = await fetchOgData(url);
+          if (result.success && result.url) {
+            finished.push({
+              ...tweetTemp,
+              media: result.url.includes("https") ? result.url : false,
+            });
+          } else {
+            finished.push(tweetTemp);
+          }
+        } else {
+          finished.push(tweetTemp);
+        }
       }
-    } catch (e) {
-      console.log(e.message);
     }
-
-    const newTweets = new TweetsModel({
-      account: id,
-      tweets: finished,
-    });
-    await newTweets.save();
-    return "Finished!";
+    return finished;
   } catch (e) {
-    console.log(e.message);
-    return "Error!";
+    console.log("error" + e.message);
+    return [];
   }
 };
 
-const fetchAllTweets = async () => {
+export const fetchAllTweets = async (ids) => {
   try {
-    await fetchTweets("cokedupoptions");
-    await fetchTweets("redditinvestors");
-    await fetchTweets("stonkmarketnews");
-    await fetchTweets("thestinkmarket");
-    await fetchTweets("watchoutshorts");
-    console.log("All finished!");
+    if (Array.isArray(ids)) {
+      const all = [];
+      for (const id of ids) {
+        const tweets = await fetchTweets(id);
+        tweets.forEach((tweet) => all.push(tweet));
+      }
+      return all;
+    } else {
+      const tweets = await fetchTweets(ids);
+      return tweets;
+    }
   } catch (e) {
     console.log("ERRROR");
     console.log(e);
   }
 };
 
-export const startTweetFetching = () => {
-  fetchAllTweets();
-  cron.schedule("0 */2 * * *", () => {
-    fetchAllTweets();
-  });
+const fetchOgData = async (url) => {
+  try {
+    const ogData = await ogs({ url: url })
+      .then((data) => {
+        const { result } = data;
+        if (result.success === true) {
+          if (result.ogImage) {
+            if (result.ogImage.url) {
+              return { success: true, url: result.ogImage.url };
+            }
+          }
+        }
+        return { success: false };
+      })
+      .catch((e) => {
+        return { success: false };
+      });
+    return ogData;
+  } catch (e) {
+    return { success: false };
+  }
 };
